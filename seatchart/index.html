@@ -141,7 +141,11 @@
   <section class="sec poster-only">
     <h2>안내게시물 (A4 가로)</h2>
     <label class="f"><span>시험일 (제목에 「8/23(일)」로 들어감)</span><input type="date" id="pDate"></label>
-    <label class="f"><span>게시물 제목</span><input type="text" id="pTitle"></label>
+    <div class="row" style="align-items:flex-end">
+      <label class="f" style="flex:1"><span>소재</span><select id="pKind"><option>공무원</option><option>군무원</option></select></label>
+      <label class="f" style="flex:1"><span>급수 표기 (비우면 자동)</span><input type="text" id="pGradeText" placeholder="자동"></label>
+    </div>
+    <p class="hint" style="margin-top:-2px">제목 미리보기: <b id="pTitlePreview"></b></p>
     <label class="f"><span>기본 급수 (이름 앞에 「7급」 같은 표시가 없는 직렬)</span>
       <select id="pGrade"><option value="9급">[9급]</option><option value="7급">[7급]</option><option value="">표기 안 함</option></select></label>
     <label class="f"><span>입실 안내 (초록)</span><input type="text" id="pEntry"></label>
@@ -150,7 +154,8 @@
     <label class="chk"><input type="checkbox" id="pShowA"> A. 종합 안내 (1장)</label>
     <label class="chk"><input type="checkbox" id="pShowB"> B. 고사장 문 앞 (강의실마다)</label>
     <label class="chk"><input type="checkbox" id="pShowC"> C. 예비 강의실 (배정 0명인 강의실마다)</label>
-    <p class="hint">내용은 「좌석배치표」의 배치 결과에서 자동으로 들어갑니다. 강의실별 직렬 문구·이동 안내는 각 장 위 칸에서 덮어쓸 수 있습니다 (비우면 자동, 이동 안내에 「-」를 쓰면 숨김).</p>
+    <p class="hint">내용은 「좌석배치표」의 배치 결과에서 자동으로 들어갑니다. <b>게시물의 글자를 클릭하면 바로 고칠 수 있고</b>(Enter = 줄바꿈), 고친 장은 위 「자동 내용으로 되돌리기」로 원래대로 돌릴 수 있습니다. 이동 안내 칸을 지우면 그 줄은 인쇄되지 않습니다.</p>
+    <button class="small" id="pResetAll" style="margin-top:4px">모든 게시물 수정 되돌리기</button>
   </section>
 
   <section class="sec seat-only">
@@ -177,9 +182,9 @@
   <div id="pages"></div>
 </main>
 
-<script src="rooms.js?v=20261016204244"></script>
-<script src="render.js?v=20261016204244"></script>
-<script src="poster.js?v=20261016204244"></script>
+<script src="rooms.js?v=20261016205558"></script>
+<script src="render.js?v=20261016205558"></script>
+<script src="poster.js?v=20261016205558"></script>
 <script>
 (function () {
   const ROOMS = window.ROOMS || [];
@@ -203,7 +208,7 @@
     poster: posterDefaults(),
   });
   function posterDefaults() {
-    return { date: '', title: '9/7급 모의고사', grade: '9급', entry: '(★시작 20분 전까지★ 입실)',
+    return { date: '', kind: '공무원', gradeText: '', grade: '9급', edits: {}, entry: '(★시작 20분 전까지★ 입실)',
       desk: '※ 데스크에서 신청자 명단 확인 후, 고사장 입장 부탁드립니다 ※', closed: '※ 시험 시작 후 입실 불가합니다 ※',
       showA: true, showB: true, showC: true, rooms: {} };
   }
@@ -215,7 +220,7 @@
   S.rooms = (S.rooms || []).filter(r => known.has(r.id));
   for (const r of ROOMS) if (!S.rooms.some(x => x.id === r.room.id)) S.rooms.push({ id: r.room.id, on: false });
   S.manual = S.manual || {}; S.overrides = S.overrides || {}; S.structs = S.structs || {};
-  S.poster = Object.assign(posterDefaults(), S.poster || {}); S.view = S.view === 'poster' ? 'poster' : 'seat';
+  S.poster = Object.assign(posterDefaults(), S.poster || {}); S.poster.edits = S.poster.edits || {}; S.view = S.view === 'poster' ? 'poster' : 'seat';
   // 배치 결과는 저장해 두고 「재배치」를 눌러야만 다시 계산한다 (규칙이 바뀌거나 JSON을 불러와도 좌석이 그대로).
   // S.placed = 자동 배치분만 {강의실: {좌석: 직렬}}, 수기 배정은 S.manual
   S.series.forEach(x => { x.rooms = (x.rooms || []).filter(id => known.has(id)); });
@@ -443,9 +448,16 @@
   const placeOf = room => room.room.name.replace(/강의실$/, '').trim().replace(/뒷$/, '뒤');          // 508호 앞강의실 → 508호 앞
   const sectionOf = room => room.room.name.replace(/^\s*\d+호\s*/, '').replace(/강의실$/, ' 강의실').trim();  // → 앞 강의실
   const roomNo = room => (room.room.name.match(/\d+/) || [''])[0];
-  function posterTitle() {
+  // 제목: [날짜(요일)] [소재] [급수] 모의고사 — 급수를 비우면 배치된 직렬의 급수로 자동 (9급·7급 → 「9/7급」)
+  function autoGradeText(perRoom) {
+    const nums = new Set();
+    for (const per of Object.values(perRoom || {})) for (const x of S.series) if (x.name && per[x.name]) { const g = gradeOf(x); if (g) nums.add(parseInt(g, 10)); }
+    return nums.size ? [...nums].sort((p, q) => q - p).join('/') + '급' : '';
+  }
+  function posterTitle(perRoom) {
     const d = S.poster.date ? new Date(S.poster.date + 'T00:00:00') : null;
-    return (d && !isNaN(d) ? `${d.getMonth() + 1}/${d.getDate()}(${'일월화수목금토'[d.getDay()]}) ` : '') + (S.poster.title || '');
+    const date = d && !isNaN(d) ? `${d.getMonth() + 1}/${d.getDate()}(${'일월화수목금토'[d.getDay()]})` : '';
+    return [date, S.poster.kind, S.poster.gradeText.trim() || autoGradeText(perRoom), '모의고사'].filter(Boolean).join(' ');
   }
   // 강의실에 실제로 앉힌 직렬 → 급수별 묶음 (직렬 입력 순서)
   function groupsOf(per) {
@@ -462,51 +474,72 @@
 
   function drawPosters(active, perRoom) {
     const main = $('pages');
-    const P = { title: posterTitle(), entry: S.poster.entry, desk: S.poster.desk, closed: S.poster.closed };
+    const P = { title: posterTitle(perRoom), entry: S.poster.entry, desk: S.poster.desk, closed: S.poster.closed };
+    $('pGradeText').placeholder = '자동: ' + (autoGradeText(perRoom) || '없음');
+    $('pTitlePreview').textContent = P.title;
     const used = active.filter(a => Object.keys(perRoom[a.room.room.id] || {}).length);
     const spare = active.filter(a => !Object.keys(perRoom[a.room.room.id] || {}).length);
-    const ov = id => (S.poster.rooms[id] = S.poster.rooms[id] || { text: '', note: '' });
-    const rowOf = a => {
-      const id = a.room.room.id, o = S.poster.rooms[id] || {};
-      return { id, place: placeOf(a.room), groups: groupsOf(perRoom[id]), text: o.text ? o.text : null };
-    };
+    const rowOf = a => ({ id: a.room.room.id, place: placeOf(a.room), groups: groupsOf(perRoom[a.room.room.id]) });
     // 같은 호실의 다른 구역(508호 앞/뒤)에 앉은 직렬 → 「관세/출입국관리직은 뒷 강의실로 이동해주세요!」
     const autoNote = a => used.filter(b => b !== a && roomNo(b.room) === roomNo(a.room))
       .map(b => groupsOf(perRoom[b.room.room.id]).flatMap(g => g.names).join('/') + '직은 ' + sectionOf(b.room) + '로 이동해주세요!').join(' ');
-    const add = (label, svg, controls) => {
+    const add = (pageId, label, render) => {
+      const edits = S.poster.edits[pageId] || {};
       const cap = document.createElement('div');
       cap.className = 'pagecap';
-      cap.innerHTML = `<span>${esc(label)}</span><span class="ctl"></span>`;
-      if (controls) controls(cap.querySelector('.ctl'));
+      cap.innerHTML = `<span>${esc(label)} <span style="color:#9aa3b5">· 글자를 눌러 고칠 수 있습니다</span></span><span class="ctl"></span>`;
+      if (Object.keys(edits).length) {
+        const btn = document.createElement('button');
+        btn.className = 'small';
+        btn.textContent = '자동 내용으로 되돌리기 (' + Object.keys(edits).length + '곳 수정됨)';
+        btn.addEventListener('click', () => { delete S.poster.edits[pageId]; save(); draw(); });
+        cap.querySelector('.ctl').appendChild(btn);
+      }
       const page = document.createElement('div');
       page.className = 'page';
-      page.innerHTML = svg;
+      page.innerHTML = render(edits);
+      makeEditable(page, pageId);
       main.append(cap, page);
     };
     // 종합 안내는 호실 번호 오름차순, 같은 호실이면 앞 → 뒤 순 (강의실 체크 순서와 무관)
     const sectionRank = r => (/앞/.test(r.room.name) ? 0 : /뒤|뒷/.test(r.room.name) ? 2 : 1);
     const byNumber = [...used].sort((x, y) => (+roomNo(x.room) || 0) - (+roomNo(y.room) || 0) || sectionRank(x.room) - sectionRank(y.room) || x.room.room.name.localeCompare(y.room.room.name));
-    if (S.poster.showA && used.length) add('A. 종합 안내', PosterRender.renderSummary(P, byNumber.map(rowOf)));
+    if (S.poster.showA && used.length) add('A', 'A. 종합 안내', e => PosterRender.renderSummary(P, byNumber.map(rowOf), e));
     if (S.poster.showB) for (const a of used) {
-      const r = rowOf(a), o = S.poster.rooms[r.id] || {};
-      r.note = o.note === '-' ? '' : (o.note || autoNote(a));
-      add('B. 고사장 문 앞 · ' + a.room.room.name, PosterRender.renderRoom(P, r), box => {
-        const mk = (label, key, ph) => {
-          const lab = document.createElement('label');
-          lab.innerHTML = `${label} <input type="text" placeholder="${esc(ph)}">`;
-          const inp = lab.querySelector('input');
-          inp.value = (S.poster.rooms[r.id] || {})[key] || '';
-          inp.addEventListener('change', () => { ov(r.id)[key] = inp.value.trim(); save(); draw(); });
-          box.appendChild(lab);
-        };
-        mk('직렬 문구', 'text', '자동: ' + r.groups.map(g => (g.grade ? '[' + g.grade + '] ' : '') + g.names.join('/')).join(' / '));
-        mk('이동 안내', 'note', autoNote(a) ? '자동: ' + autoNote(a) : '없음 (「-」 = 숨김)');
-      });
+      const r = Object.assign(rowOf(a), { note: autoNote(a) });
+      add('B:' + r.id, 'B. 고사장 문 앞 · ' + a.room.room.name, e => PosterRender.renderRoom(P, r, e));
     }
-    if (S.poster.showC) for (const a of spare) add('C. 예비 강의실 · ' + a.room.room.name, PosterRender.renderSpare(P));
+    if (S.poster.showC) for (const a of spare) add('C:' + a.room.room.id, 'C. 예비 강의실 · ' + a.room.room.name, e => PosterRender.renderSpare(P, e));
     if (!main.children.length) main.innerHTML = '<p class="empty">출력할 안내게시물이 없습니다. 좌석배치표에서 배치를 먼저 하거나, 왼쪽에서 게시물 종류를 체크하세요.</p>';
     PosterRender.fit(main);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => PosterRender.fit(main));
+  }
+
+  // 게시물 글자 칸을 그 자리에서 고치기 — 고친 내용은 그 장(pageId)의 칸(key)별로 저장, 칸을 벗어나면 반영
+  function makeEditable(page, pageId) {
+    for (const el of page.querySelectorAll('[data-edit]')) {
+      el.contentEditable = 'true';
+      el.spellcheck = false;
+      let before = '';
+      el.addEventListener('focus', () => { before = PosterRender.clean(el); });
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); document.execCommand('insertLineBreak'); }
+        if (e.key === 'Escape') { el.blur(); }
+      });
+      el.addEventListener('paste', e => {       // 붙여넣기는 글자만
+        e.preventDefault();
+        document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain'));
+      });
+      el.addEventListener('input', () => PosterRender.fit(page));
+      el.addEventListener('blur', () => {
+        const html = PosterRender.clean(el).replace(/(<br>)+$/, '');
+        if (html === before) return;
+        (S.poster.edits[pageId] = S.poster.edits[pageId] || {})[el.dataset.edit] = html;
+        save();
+        // 바로 다른 칸을 눌렀으면 그 칸을 고치는 동안은 다시 그리지 않는다 (다시 그리면 커서가 사라짐)
+        setTimeout(() => { if (!(document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-edit]'))) draw(); }, 0);
+      });
+    }
   }
 
   function onSeat(e, room) {
@@ -584,6 +617,10 @@
   // ---------- 버튼 ----------
   $('print').addEventListener('click', () => window.print());
   $('relayout').addEventListener('click', () => relayout(true));
+  $('pResetAll').addEventListener('click', () => {
+    if (!confirm('게시물에서 직접 고친 내용을 모두 지우고 자동 내용으로 되돌릴까요?')) return;
+    S.poster.edits = {}; save(); draw();
+  });
   $('tabSeat').addEventListener('click', () => { S.view = 'seat'; save(); draw(); });
   $('tabPoster').addEventListener('click', () => { S.view = 'poster'; save(); draw(); });
   const pBind = (id, key, type = 'value') => {
@@ -591,7 +628,7 @@
     el[type === 'checked' ? 'checked' : 'value'] = S.poster[key];
     el.addEventListener(type === 'checked' || el.tagName === 'SELECT' ? 'change' : 'input', () => { S.poster[key] = type === 'checked' ? el.checked : el.value; save(); draw(); });
   };
-  pBind('pDate', 'date'); pBind('pTitle', 'title'); pBind('pGrade', 'grade'); pBind('pEntry', 'entry'); pBind('pDesk', 'desk'); pBind('pClosed', 'closed');
+  pBind('pDate', 'date'); pBind('pKind', 'kind'); pBind('pGradeText', 'gradeText'); pBind('pGrade', 'grade'); pBind('pEntry', 'entry'); pBind('pDesk', 'desk'); pBind('pClosed', 'closed');
   pBind('pShowA', 'showA', 'checked'); pBind('pShowB', 'showB', 'checked'); pBind('pShowC', 'showC', 'checked');
   const pcss = document.createElement('style'); pcss.textContent = PosterRender.CSS; document.head.appendChild(pcss);
   $('reset').addEventListener('click', () => {
