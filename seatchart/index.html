@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모의고사 좌석배치표</title>
+<!-- 안내게시물 글꼴 (인터넷이 되면 내려받고, 아니면 PC에 설치된 글꼴 → 맑은 고딕) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@2.0/nanumsquare.css">
+<style id="pagesize">@page { size: 364mm 257mm; margin: 0; }</style>
+<style>
+  :root {
+    --ink: #1c1f26; --muted: #6b7180; --line: #dcdfe5; --panel: #fff; --ground: #eef0f3;
+    --accent: #023015; --accent-ink: #fff; --warn: #c62828; --ok: #2e7d32;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--ground); color: var(--ink); font: 13px/1.5 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', sans-serif; display: flex; min-height: 100vh; }
+
+  .side { width: 410px; flex: none; background: var(--panel); border-right: 1px solid var(--line); height: 100vh; overflow-y: auto; position: sticky; top: 0; }
+  .side header { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+  .side h1 { font-size: 16px; margin: 0 0 2px; }
+  .side header p { margin: 0; color: var(--muted); font-size: 12px; }
+  .sec { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .sec h2 { font-size: 12px; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+  label.f { display: block; margin-bottom: 8px; }
+  label.f span { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+  input[type=text], input[type=number], textarea, select { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
+  textarea { resize: vertical; min-height: 44px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid #2f528f; outline-offset: 1px; }
+  .row { display: flex; gap: 6px; align-items: center; }
+  .chk { display: flex; gap: 6px; align-items: center; margin: 4px 0; cursor: pointer; }
+  button { font: inherit; border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+  button.small { padding: 2px 7px; font-size: 12px; }
+  button:disabled { opacity: .4; cursor: default; }
+
+  .series { display: flex; flex-direction: column; gap: 8px; }
+  .srow { border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+  .srow .top { display: grid; grid-template-columns: 30px 1fr 1fr 56px 26px; gap: 4px; align-items: center; }
+  .srow .top input[type=text] { padding: 6px 6px; }
+  .srow .top input.label::placeholder { color: #a7acb6; }
+  .shead { display: grid; grid-template-columns: 30px 1fr 1fr 56px 26px; gap: 4px; font-size: 11px; color: var(--muted); padding: 0 7px; margin-bottom: -4px; }
+  .srow input[type=color] { width: 30px; height: 28px; padding: 1px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+  .srow input[type=number] { text-align: right; font-variant-numeric: tabular-nums; }
+  .srow .where { margin-top: 5px; display: flex; gap: 6px; align-items: baseline; font-size: 12px; }
+  .srow .where > span { color: var(--muted); flex: none; }
+  .srow .where button { flex: 1; text-align: left; padding: 3px 8px; font-size: 12px; }
+  .srow .picks { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; padding: 6px 4px 2px; border-top: 1px dashed var(--line); font-size: 12px; }
+  .srow .picks label { display: flex; gap: 4px; align-items: center; cursor: pointer; }
+  .total { display: flex; justify-content: space-between; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .total b.bad { color: var(--warn); } .total b.good { color: var(--ok); }
+
+  .rooms { list-style: none; margin: 0; padding: 0; }
+  .rooms li { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 6px; align-items: center; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+  .rooms li:last-child { border-bottom: none; }
+  .rooms .cap { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rooms .mv { display: flex; gap: 2px; }
+
+  .tools { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tools button.on { background: #2f528f; color: #fff; border-color: #2f528f; }
+  .hint { color: var(--muted); font-size: 11.5px; margin: 8px 0 0; }
+  .warnbox { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: #fdecea; color: var(--warn); font-size: 12px; }
+  .warnbox:empty { display: none; }
+  .dirtybox { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: #fff8e1; color: #8a5a00; font-size: 12px; }
+  .dirtybox:empty { display: none; }
+
+  main { flex: 1; padding: 22px; overflow: auto; }
+  .page { background: #fff; width: 100%; max-width: 1180px; margin: 0 auto 22px; box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.06); }
+  .page svg { display: block; width: 100%; height: auto; }
+  .tabs { max-width: 1180px; margin: 0 auto 14px; display: flex; gap: 6px; }
+  .tabs button { padding: 8px 16px; font-weight: 700; }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .pagecap input { width: 220px; padding: 3px 6px; font-size: 12px; }
+  .pagecap label { display: inline-flex; gap: 4px; align-items: center; margin-left: 10px; }
+  body.view-poster .seat-only, body.view-seat .poster-only { display: none !important; }
+  .srow .where select { width: auto; padding: 2px 4px; font-size: 12px; }
+  .pagecap { max-width: 1180px; margin: 0 auto 6px; color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
+  .page .seat { cursor: pointer; }
+  .page .seat.vacant { fill: #e4e2dc; }
+  .page .seat:hover { stroke: #2f528f; stroke-width: .6; }
+  .page .struct { cursor: move; }
+  .page .handle { cursor: nwse-resize; }
+  .page svg { touch-action: none; }
+  .empty { text-align: center; color: var(--muted); padding: 80px 0; }
+
+  /* B4(JIS) 가로 = 364×257mm.  좌석표는 고정 mm 대신 "인쇄되는 한 장" 크기(100vw×100vh)에 맞춰
+     비율을 유지한 채 꽉 차게 + 가운데 정렬한다 → 프린터 용지가 ISO B4(353×250)이거나 여백이 생겨도 쏠리거나 잘리지 않음 */
+  @media print {
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body { display: block; }
+    .side, .pagecap, .empty, .tabs { display: none !important; }
+    main { padding: 0; margin: 0; overflow: visible; }
+    .page { width: 100vw; height: 100vh; max-width: none; margin: 0; box-shadow: none; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; break-after: page; page-break-after: always; break-inside: avoid; }
+    .page:last-child { break-after: auto; page-break-after: auto; }
+    .page svg { width: 100%; height: 100%; }
+    .page .seat.vacant { fill: #afabab; }
+    .page .handle { display: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  @media (max-width: 860px) { body { display: block; } .side { width: auto; height: auto; position: static; } }
+</style>
+</head>
+<body>
+<aside class="side">
+  <header>
+    <h1>모의고사 좌석배치표</h1>
+    <p>강의실 엑셀 좌석표 → 직렬별 인원 입력 → B4 출력</p>
+  </header>
+
+  <section class="sec seat-only">
+    <h2>시험 안내</h2>
+    <label class="f"><span>시험명</span><input type="text" id="exam"></label>
+    <label class="f"><span>안내 문구 (노랑)</span><input type="text" id="notice"></label>
+    <label class="f"><span>착석금지 문구 (빨강)</span><input type="text" id="warning"></label>
+    <label class="f"><span>입실 마감 (우측 강조, 줄바꿈 가능)</span><textarea id="deadline" rows="2"></textarea></label>
+    <label class="chk"><input type="checkbox" id="showBanner"> 안내 바 표시</label>
+    <label class="chk"><input type="checkbox" id="showTv"> TV 표시</label>
+    <label class="chk"><input type="checkbox" id="showCamera"> 카메라 표시</label>
+  </section>
+
+  <section class="sec">
+    <h2>직렬 · 수험 인원 <span class="row"><button class="small" id="preset-gun">군무원</button><button class="small" id="preset-gong">공무원</button></span></h2>
+    <div class="shead"><span>색</span><span>직렬</span><span>표시용 이름</span><span style="text-align:right">인원</span><span></span></div>
+    <div class="series" id="seriesBody"></div>
+    <p class="hint" style="margin-top:6px">표시용 이름은 <b>좌석에만</b> 찍힙니다 (비우면 직렬 이름). 아래 범례에는 항상 직렬 이름이 나옵니다.</p>
+    <div class="row" style="margin-top:6px"><button class="small" id="addSeries">+ 직렬 추가</button></div>
+    <p class="hint">배치 원칙: 큰 직렬부터 왼쪽 분단에 몰아서, 10명 이하 소수 직렬은 남은 분단에 세로 한 줄로. 한 분단 한 직렬(자리 모자랄 때만 섞음), 한 직렬은 한 강의실.</p>
+    <div class="total"><span>인원 합계 <b id="sumPeople">0</b></span><span>사용 좌석 <b id="sumSeats">0</b></span></div>
+    <button class="primary" id="relayout" style="width:100%;margin-top:8px">재배치 (지금 규칙·인원으로 다시 앉히기)</button>
+    <div class="dirtybox" id="dirty"></div>
+    <div class="warnbox" id="warn"></div>
+  </section>
+
+  <section class="sec">
+    <h2>강의실 (위에서부터 채움)</h2>
+    <ul class="rooms" id="roomList"></ul>
+  </section>
+
+  <section class="sec poster-only">
+    <h2>안내게시물 (A4 가로)</h2>
+    <label class="f"><span>시험일 (제목에 「8/23(일)」로 들어감)</span><input type="date" id="pDate"></label>
+    <label class="f"><span>게시물 제목</span><input type="text" id="pTitle"></label>
+    <label class="f"><span>기본 급수 (이름 앞에 「7급」 같은 표시가 없는 직렬)</span>
+      <select id="pGrade"><option value="9급">[9급]</option><option value="7급">[7급]</option><option value="">표기 안 함</option></select></label>
+    <label class="f"><span>입실 안내 (초록)</span><input type="text" id="pEntry"></label>
+    <label class="f"><span>데스크 안내 (노란 형광)</span><input type="text" id="pDesk"></label>
+    <label class="f"><span>입실 불가 안내 (「입실 불가」만 빨강)</span><input type="text" id="pClosed"></label>
+    <label class="chk"><input type="checkbox" id="pShowA"> A. 종합 안내 (1장)</label>
+    <label class="chk"><input type="checkbox" id="pShowB"> B. 고사장 문 앞 (강의실마다)</label>
+    <label class="chk"><input type="checkbox" id="pShowC"> C. 예비 강의실 (배정 0명인 강의실마다)</label>
+    <p class="hint">내용은 「좌석배치표」의 배치 결과에서 자동으로 들어갑니다. 강의실별 직렬 문구·이동 안내는 각 장 위 칸에서 덮어쓸 수 있습니다 (비우면 자동, 이동 안내에 「-」를 쓰면 숨김).</p>
+  </section>
+
+  <section class="sec seat-only">
+    <h2>좌석 직접 수정</h2>
+    <div class="tools" id="tools"></div>
+    <p class="hint">좌석을 클릭하면 적용됩니다. <b>Shift+클릭</b>은 그 분단 전체. 직접 칠한 좌석은 자동 배치보다 우선하며 인원 합계에 포함됩니다.</p>
+    <p class="hint"><b>교탁·기둥·출입문</b>은 끌어서 옮기고, 오른쪽 아래 흰 손잡이를 끌어 크기를 바꿉니다. 기둥이 좌석을 25% 넘게 덮으면 그 좌석은 사라집니다.</p>
+  </section>
+
+  <section class="sec">
+    <div class="row" style="flex-wrap:wrap">
+      <button class="primary" id="print">B4로 인쇄</button>
+      <button id="export">설정 저장</button>
+      <button id="importBtn">설정 불러오기</button>
+      <input type="file" id="importFile" accept=".json" hidden>
+      <button id="reset">수정 초기화</button>
+    </div>
+    <p class="hint" id="printHint"></p>
+  </section>
+</aside>
+
+<main>
+  <nav class="tabs"><button id="tabSeat">좌석배치표 (B4)</button><button id="tabPoster">안내게시물 (A4)</button></nav>
+  <div id="pages"></div>
+</main>
+
+<script src="rooms.js?v=20261016204123"></script>
+<script src="render.js?v=20261016204123"></script>
+<script src="poster.js?v=20261016204123"></script>
+<script>
+(function () {
+  const ROOMS = window.ROOMS || [];
+  const STORE = 'mockexam-seatchart-v2';
+  const PRESETS = {
+    gun: [['행정', '#fddbdb'], ['군수', '#d8fdcb'], ['수사', '#f7fdbb'], ['전산', '#f9b76f'], ['사이버', '#cff8fd'], ['기계', '#e3cbf1']],
+    gong: [['일반행정', '#fddbdb'], ['교육행정', '#d8fdcb'], ['세무', '#f7fdbb'], ['관세', '#f9b76f'], ['사회복지', '#cff8fd'], ['우정', '#e3cbf1'], ['기술', '#ffd8a8']],
+  };
+  const EXTRA_COLORS = ['#ffe0b2', '#c5cae9', '#b2dfdb', '#f8bbd0', '#dcedc8', '#ffecb3'];
+
+  const defaults = () => ({
+    exam: '제7회 군무원 합격예측 모의고사',
+    notice: '직렬 표기된 좌석에 따라 착석해 주시기 바랍니다.',
+    warning: '회색 표기된 좌석 착석 금지',
+    deadline: '13:40이후\n입실금지',
+    showBanner: true, showTv: false, showCamera: false,
+    series: PRESETS.gun.map(([name, color]) => ({ name, color, count: 0, rooms: [] })),
+    rooms: ROOMS.map(r => ({ id: r.room.id, on: true })),
+    manual: {}, overrides: {}, structs: {},
+    view: 'seat',
+    poster: posterDefaults(),
+  });
+  function posterDefaults() {
+    return { date: '', title: '9/7급 모의고사', grade: '9급', entry: '(★시작 20분 전까지★ 입실)',
+      desk: '※ 데스크에서 신청자 명단 확인 후, 고사장 입장 부탁드립니다 ※', closed: '※ 시험 시작 후 입실 불가합니다 ※',
+      showA: true, showB: true, showC: true, rooms: {} };
+  }
+
+  let S;
+  try { S = JSON.parse(localStorage.getItem(STORE)) || defaults(); } catch (e) { S = defaults(); }
+  // 강의실 목록이 바뀌었으면 맞춘다 (새 강의실은 맨 뒤, 사라진 강의실은 제거)
+  const known = new Set(ROOMS.map(r => r.room.id));
+  S.rooms = (S.rooms || []).filter(r => known.has(r.id));
+  for (const r of ROOMS) if (!S.rooms.some(x => x.id === r.room.id)) S.rooms.push({ id: r.room.id, on: false });
+  S.manual = S.manual || {}; S.overrides = S.overrides || {}; S.structs = S.structs || {};
+  S.poster = Object.assign(posterDefaults(), S.poster || {}); S.view = S.view === 'poster' ? 'poster' : 'seat';
+  // 배치 결과는 저장해 두고 「재배치」를 눌러야만 다시 계산한다 (규칙이 바뀌거나 JSON을 불러와도 좌석이 그대로).
+  // S.placed = 자동 배치분만 {강의실: {좌석: 직렬}}, 수기 배정은 S.manual
+  S.series.forEach(x => { x.rooms = (x.rooms || []).filter(id => known.has(id)); });
+  let tool = { kind: 'paint', name: (S.series[0] || {}).name };
+  const openPicks = new Set();                        // 강의실 고르기 목록을 펼쳐 둔 직렬
+
+  const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} };
+  // 화면에서 옮기거나 크기를 바꾼 구조물까지 반영한 강의실
+  const byId = id => SeatRender.applyEdits(ROOMS.find(r => r.room.id === id), S.structs[id]);
+  const shortName = room => room.room.name.replace('호', '').replace('강의실', '').trim();
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---------- 왼쪽 패널 ----------
+  function bindField(id, key, type = 'value') {
+    const el = $(id);
+    el[type === 'checked' ? 'checked' : 'value'] = S[key];
+    el.addEventListener(type === 'checked' ? 'change' : 'input', () => { S[key] = type === 'checked' ? el.checked : el.value; save(); draw(); });
+  }
+  bindField('exam', 'exam'); bindField('notice', 'notice'); bindField('warning', 'warning'); bindField('deadline', 'deadline');
+  bindField('showBanner', 'showBanner', 'checked'); bindField('showTv', 'showTv', 'checked');
+  bindField('showCamera', 'showCamera', 'checked');
+
+  function whereLabel(x) {
+    if (!x.rooms.length) return '어느 강의실이든 (위에서부터)';
+    return S.rooms.filter(r => x.rooms.includes(r.id)).map(r => shortName(byId(r.id))).join(' · ');
+  }
+
+  function renderSeries() {
+    const tb = $('seriesBody');
+    tb.innerHTML = '';
+    S.series.forEach((x, i) => {
+      const tr = document.createElement('div');
+      tr.className = 'srow';
+      tr.innerHTML = `<div class="top"><input type="color" value="${esc(x.color)}" aria-label="색">
+        <input type="text" value="${esc(x.name)}" aria-label="직렬 이름">
+        <input type="text" class="label" value="${esc(x.label || '')}" placeholder="${esc(x.name)}" aria-label="표시용 이름 (비우면 직렬 이름)">
+        <input type="number" min="0" value="${x.count || 0}" aria-label="인원">
+        <button class="small" aria-label="삭제">✕</button></div>
+        <div class="where"><span>강의실</span><button class="small" aria-expanded="${openPicks.has(i)}">${esc(whereLabel(x))} ▾</button>
+          <select aria-label="급수" title="안내게시물의 [급수] 표기"><option value="">급수 자동</option><option value="9급">9급</option><option value="7급">7급</option><option value="none">표기 안 함</option></select></div>`;
+      const where = tr.querySelector('.where button');
+      const gsel = tr.querySelector('.where select');
+      gsel.value = x.grade || '';
+      gsel.addEventListener('change', () => { x.grade = gsel.value; save(); draw(); });
+      where.addEventListener('click', () => { openPicks.has(i) ? openPicks.delete(i) : openPicks.add(i); renderSeries(); });
+      if (openPicks.has(i)) {
+        const picks = document.createElement('div');
+        picks.className = 'picks';
+        for (const r of S.rooms) {
+          const lab = document.createElement('label');
+          lab.innerHTML = `<input type="checkbox" ${x.rooms.includes(r.id) ? 'checked' : ''}> ${esc(shortName(byId(r.id)))}${r.on ? '' : ' <span style="color:#9aa">(출력 안 함)</span>'}`;
+          lab.querySelector('input').addEventListener('change', e => {
+            x.rooms = e.target.checked ? x.rooms.concat(r.id) : x.rooms.filter(id => id !== r.id);
+            save(); where.textContent = whereLabel(x) + ' ▾'; draw();
+          });
+          picks.appendChild(lab);
+        }
+        tr.appendChild(picks);
+      }
+      const [c, n, lb, k] = tr.querySelectorAll('.top input');
+      c.addEventListener('input', () => { x.color = c.value; save(); draw(); });
+      lb.addEventListener('input', () => { x.label = lb.value.trim(); save(); draw(); });
+      n.addEventListener('change', () => {
+        const old = x.name; x.name = n.value.trim(); lb.placeholder = x.name;
+        for (const m of Object.values(S.manual).concat(Object.values(S.placed || {}))) for (const k2 in m) if (m[k2] === old) m[k2] = x.name;
+        if (tool.name === old) tool.name = x.name;
+        save(); renderTools(); draw();
+      });
+      k.addEventListener('change', () => { x.count = Math.max(0, +k.value || 0); save(); draw(); });
+      tr.querySelector('.top button').addEventListener('click', () => {
+        S.series.splice(i, 1);
+        openPicks.clear();
+        for (const m of Object.values(S.manual).concat(Object.values(S.placed || {}))) for (const k2 in m) if (m[k2] === x.name) delete m[k2];
+        save(); renderSeries(); renderTools(); draw();
+      });
+      tb.appendChild(tr);
+    });
+  }
+  $('addSeries').addEventListener('click', () => {
+    S.series.push({ name: '새 직렬', color: EXTRA_COLORS[S.series.length % EXTRA_COLORS.length], count: 0, rooms: [] });
+    save(); renderSeries(); renderTools(); draw();
+  });
+  for (const key of ['gun', 'gong']) $('preset-' + key).addEventListener('click', () => {
+    if (!confirm('직렬 목록을 ' + (key === 'gun' ? '군무원' : '공무원') + ' 기본값으로 바꿀까요? (인원은 0으로 초기화)')) return;
+    S.series = PRESETS[key].map(([name, color]) => ({ name, color, count: 0, rooms: [] }));
+    S.manual = {};
+    openPicks.clear();
+    tool = { kind: 'paint', name: S.series[0].name };
+    save(); renderSeries(); renderTools(); draw();
+  });
+
+  function renderRooms(result) {
+    const ul = $('roomList');
+    ul.innerHTML = '';
+    S.rooms.forEach((r, i) => {
+      const room = byId(r.id);
+      const cap = SeatRender.capacity(room, S.overrides[r.id]);
+      const used = r.on && result ? Object.values(result.perRoom[r.id] || {}).reduce((a, b) => a + b, 0) : 0;
+      const li = document.createElement('li');
+      li.innerHTML = `<input type="checkbox" ${r.on ? 'checked' : ''} aria-label="${esc(room.room.name)} 사용">
+        <span>${esc(room.room.name)}</span>
+        <span class="cap">${r.on ? used + ' / ' : ''}${cap}석</span>
+        <span class="mv"><button class="small" aria-label="위로" ${i === 0 ? 'disabled' : ''}>▲</button><button class="small" aria-label="아래로" ${i === S.rooms.length - 1 ? 'disabled' : ''}>▼</button></span>`;
+      li.querySelector('input').addEventListener('change', e => { r.on = e.target.checked; save(); draw(); });
+      const [up, dn] = li.querySelectorAll('button');
+      up.addEventListener('click', () => { S.rooms.splice(i - 1, 0, S.rooms.splice(i, 1)[0]); save(); draw(); });
+      dn.addEventListener('click', () => { S.rooms.splice(i + 1, 0, S.rooms.splice(i, 1)[0]); save(); draw(); });
+      ul.appendChild(li);
+    });
+  }
+
+  function renderTools() {
+    const box = $('tools');
+    box.innerHTML = '';
+    const add = (label, t, color) => {
+      const b = document.createElement('button');
+      b.className = 'small' + (tool.kind === t.kind && tool.name === t.name ? ' on' : '');
+      b.innerHTML = color ? `<span style="display:inline-block;width:10px;height:10px;background:${esc(color)};border:1px solid #0003;margin-right:4px;vertical-align:-1px"></span>${esc(label)}` : esc(label);
+      b.addEventListener('click', () => { tool = t; renderTools(); });
+      box.appendChild(b);
+    };
+    S.series.filter(x => x.name).forEach(x => add(x.name, { kind: 'paint', name: x.name }, x.color));
+    add('지우기 (자동 배치로)', { kind: 'erase' });
+    add('착석금지 ↔ 가능', { kind: 'toggle' });
+  }
+
+  // ---------- 배치 + 그리기 ----------
+  function cfg() {
+    const series = {}, labels = {};
+    S.series.forEach(x => { if (x.name) { series[x.name] = x.color; if (x.label) labels[x.name] = x.label; } });
+    return { exam: S.exam, notice: S.notice, warning: S.warning, deadline: S.deadline, series, labels,
+      showBanner: S.showBanner, showTv: S.showTv, showCamera: S.showCamera };
+  }
+
+  // 배치에 영향을 주는 입력의 지문 — 마지막 재배치 때와 다르면 「재배치 필요」 표시
+  const signature = () => JSON.stringify([
+    S.series.map(x => [x.name, +x.count || 0, x.rooms || []]), S.rooms.filter(r => r.on).map(r => r.id), S.overrides, S.structs]);
+  const activeRooms = () => S.rooms.filter(r => r.on).map(r => ({ room: byId(r.id), overrides: S.overrides[r.id] || {}, manual: S.manual[r.id] || {} }));
+  const unplacedMsg = un => '배정 불가: ' + un.map(([n, k]) => `${n} ${k}명`).join(', ') +
+    ' — 한 강의실에 다 앉힐 자리가 없어 배정하지 않았습니다. 다른 강의실을 체크하거나, 여러 강의실에 나눠 앉히려면 그 직렬의 「강의실」에서 2곳 이상 고른 뒤 재배치하세요.';
+
+  // 저장된 자동 배치 + 수기 배정 → 실제 좌석. 없어진 좌석·착석금지로 바뀐 좌석·지운 직렬은 빼고, 수기 배정이 우선
+  function seatsOf(a) {
+    const id = a.room.room.id, names = new Set(S.series.map(x => x.name));
+    const open = new Set(SeatRender.openSeats(a.room, a.overrides).map(s => s.id));
+    const out = {};
+    for (const [sid, n] of Object.entries((S.placed || {})[id] || {})) if (open.has(sid) && names.has(n)) out[sid] = n;
+    for (const [sid, n] of Object.entries(a.manual)) if (names.has(n)) out[sid] = n;
+    return out;
+  }
+
+  // 「재배치」: 직렬·인원·강의실 선택·수기 배정·착석금지·구조물은 그대로 두고, 자동 배치 좌석만 지금 규칙으로 다시 계산
+  function relayout(withAlert = true) {
+    const active = activeRooms();
+    const result = SeatRender.autoAssign(active, S.series);
+    S.placed = {};
+    for (const a of active) {
+      const id = a.room.room.id, auto = {};
+      for (const [sid, n] of Object.entries(result.fills[id] || {})) if (!a.manual[sid]) auto[sid] = n;
+      S.placed[id] = auto;
+    }
+    S.placedInfo = { at: new Date().toISOString(), unplaced: result.unplaced || {}, sig: signature() };
+    save(); draw();
+    const un = Object.entries(result.unplaced || {});
+    if (withAlert && un.length) setTimeout(() => alert(unplacedMsg(un)), 30);
+  }
+
+  function draw() {
+    const active = activeRooms();
+    const c = cfg();
+    const poster = S.view === 'poster';
+    document.body.className = poster ? 'view-poster' : 'view-seat';
+    $('tabSeat').className = poster ? '' : 'on';
+    $('tabPoster').className = poster ? 'on' : '';
+    $('pagesize').textContent = poster ? '@page { size: 297mm 210mm; margin: 0; }' : '@page { size: 364mm 257mm; margin: 0; }';
+    $('print').textContent = poster ? 'A4로 인쇄' : 'B4로 인쇄';
+    $('printHint').innerHTML = poster
+      ? '인쇄 창: 용지 <b>A4</b>, 레이아웃 <b>가로</b>, 여백 <b>없음</b>, 배경 그래픽 <b>켜기</b>. 한 장씩 용지에 맞춰 가운데 정렬됩니다.'
+      : '인쇄 창: 용지 <b>B4</b>(257×364mm), 여백 <b>없음</b>, 배율 <b>기본값</b>, 배경 그래픽 <b>켜기</b>. 좌석표는 용지에 맞춰 자동으로 꽉 차고 가운데 정렬됩니다.';
+    const main = $('pages');
+    main.innerHTML = '';
+    if (!active.length) main.innerHTML = '<p class="empty">왼쪽 「강의실」에서 출력할 강의실을 체크하세요.</p>';
+    const perRoom = {}, placedCount = {};
+    for (const a of active) {
+      const id = a.room.room.id;
+      const fills = seatsOf(a);
+      const per = perRoom[id] = {};
+      Object.values(fills).forEach(n => { per[n] = (per[n] || 0) + 1; placedCount[n] = (placedCount[n] || 0) + 1; });
+      if (poster) continue;
+      const free = SeatRender.capacity(a.room, a.overrides) - Object.keys(fills).length;
+      const cap = document.createElement('div');
+      cap.className = 'pagecap';
+      cap.innerHTML = `<span>${esc(a.room.room.name)} · 엑셀 ${esc(a.room.room.source)}</span><span>${Object.entries(per).map(([n, k]) => esc(n) + ' ' + k).join(' · ') || '배정 없음'} · 빈 좌석 ${free}</span>`;
+      const page = document.createElement('div');
+      page.className = 'page';
+      page.innerHTML = SeatRender.renderSheet(a.room, fills, c, a.overrides);
+      page.addEventListener('click', e => onSeat(e, a.room));
+      page.addEventListener('pointerdown', e => onStructDrag(e, page, id));
+      main.append(cap, page);
+    }
+    const people = S.series.reduce((n, x) => n + (+x.count || 0), 0);
+    const seats = active.reduce((n, a) => n + SeatRender.capacity(a.room, a.overrides), 0);
+    $('sumPeople').textContent = people;
+    $('sumSeats').textContent = seats;
+    $('sumSeats').className = people > seats ? 'bad' : 'good';
+    // 마지막 재배치에서 배정 못 한 직렬 + 지금 좌석 수와 입력 인원이 다른 직렬
+    const info = S.placedInfo || {};
+    const unp = info.unplaced || {};
+    const un = Object.entries(unp).filter(([n]) => S.series.some(x => x.name === n));
+    const diff = S.series.filter(x => x.name && !(x.name in unp) && (placedCount[x.name] || 0) !== (+x.count || 0))
+      .map(x => `${x.name} ${placedCount[x.name] || 0}/${+x.count || 0}명`);
+    $('warn').textContent = [un.length ? unplacedMsg(un) : '', diff.length ? '앉힌 좌석/응시 인원이 다름: ' + diff.join(', ') : '']
+      .filter(Boolean).join(' ');
+    $('dirty').textContent = info.sig !== signature()
+      ? '마지막 배치 이후 인원·직렬·강의실·착석금지·구조물이 바뀌었습니다. 「재배치」를 눌러야 좌석에 반영됩니다.' : '';
+    renderRooms({ perRoom });
+    if (poster) drawPosters(active, perRoom);
+  }
+
+  // ---------- 안내게시물 ----------
+  const GRADE_RE = /^\s*([0-9])\s*급\s*/;
+  const gradeOf = x => (x.grade === 'none' ? '' : x.grade || (GRADE_RE.exec(x.name) ? GRADE_RE.exec(x.name)[1] + '급' : S.poster.grade));
+  const plainName = x => x.name.replace(GRADE_RE, '');
+  const placeOf = room => room.room.name.replace(/강의실$/, '').trim().replace(/뒷$/, '뒤');          // 508호 앞강의실 → 508호 앞
+  const sectionOf = room => room.room.name.replace(/^\s*\d+호\s*/, '').replace(/강의실$/, ' 강의실').trim();  // → 앞 강의실
+  const roomNo = room => (room.room.name.match(/\d+/) || [''])[0];
+  function posterTitle() {
+    const d = S.poster.date ? new Date(S.poster.date + 'T00:00:00') : null;
+    return (d && !isNaN(d) ? `${d.getMonth() + 1}/${d.getDate()}(${'일월화수목금토'[d.getDay()]}) ` : '') + (S.poster.title || '');
+  }
+  // 강의실에 실제로 앉힌 직렬 → 급수별 묶음 (직렬 입력 순서)
+  function groupsOf(per) {
+    const groups = [];
+    for (const x of S.series) {
+      if (!x.name || !per[x.name]) continue;
+      const g = gradeOf(x);
+      let grp = groups.find(z => z.grade === g);
+      if (!grp) groups.push(grp = { grade: g, names: [] });
+      grp.names.push(plainName(x));
+    }
+    return groups;
+  }
+
+  function drawPosters(active, perRoom) {
+    const main = $('pages');
+    const P = { title: posterTitle(), entry: S.poster.entry, desk: S.poster.desk, closed: S.poster.closed };
+    const used = active.filter(a => Object.keys(perRoom[a.room.room.id] || {}).length);
+    const spare = active.filter(a => !Object.keys(perRoom[a.room.room.id] || {}).length);
+    const ov = id => (S.poster.rooms[id] = S.poster.rooms[id] || { text: '', note: '' });
+    const rowOf = a => {
+      const id = a.room.room.id, o = S.poster.rooms[id] || {};
+      return { id, place: placeOf(a.room), groups: groupsOf(perRoom[id]), text: o.text ? o.text : null };
+    };
+    // 같은 호실의 다른 구역(508호 앞/뒤)에 앉은 직렬 → 「관세/출입국관리직은 뒷 강의실로 이동해주세요!」
+    const autoNote = a => used.filter(b => b !== a && roomNo(b.room) === roomNo(a.room))
+      .map(b => groupsOf(perRoom[b.room.room.id]).flatMap(g => g.names).join('/') + '직은 ' + sectionOf(b.room) + '로 이동해주세요!').join(' ');
+    const add = (label, svg, controls) => {
+      const cap = document.createElement('div');
+      cap.className = 'pagecap';
+      cap.innerHTML = `<span>${esc(label)}</span><span class="ctl"></span>`;
+      if (controls) controls(cap.querySelector('.ctl'));
+      const page = document.createElement('div');
+      page.className = 'page';
+      page.innerHTML = svg;
+      main.append(cap, page);
+    };
+    // 종합 안내는 호실 번호 오름차순, 같은 호실이면 앞 → 뒤 순 (강의실 체크 순서와 무관)
+    const sectionRank = r => (/앞/.test(r.room.name) ? 0 : /뒤|뒷/.test(r.room.name) ? 2 : 1);
+    const byNumber = [...used].sort((x, y) => (+roomNo(x.room) || 0) - (+roomNo(y.room) || 0) || sectionRank(x.room) - sectionRank(y.room) || x.room.room.name.localeCompare(y.room.room.name));
+    if (S.poster.showA && used.length) add('A. 종합 안내', PosterRender.renderSummary(P, byNumber.map(rowOf)));
+    if (S.poster.showB) for (const a of used) {
+      const r = rowOf(a), o = S.poster.rooms[r.id] || {};
+      r.note = o.note === '-' ? '' : (o.note || autoNote(a));
+      add('B. 고사장 문 앞 · ' + a.room.room.name, PosterRender.renderRoom(P, r), box => {
+        const mk = (label, key, ph) => {
+          const lab = document.createElement('label');
+          lab.innerHTML = `${label} <input type="text" placeholder="${esc(ph)}">`;
+          const inp = lab.querySelector('input');
+          inp.value = (S.poster.rooms[r.id] || {})[key] || '';
+          inp.addEventListener('change', () => { ov(r.id)[key] = inp.value.trim(); save(); draw(); });
+          box.appendChild(lab);
+        };
+        mk('직렬 문구', 'text', '자동: ' + r.groups.map(g => (g.grade ? '[' + g.grade + '] ' : '') + g.names.join('/')).join(' / '));
+        mk('이동 안내', 'note', autoNote(a) ? '자동: ' + autoNote(a) : '없음 (「-」 = 숨김)');
+      });
+    }
+    if (S.poster.showC) for (const a of spare) add('C. 예비 강의실 · ' + a.room.room.name, PosterRender.renderSpare(P));
+    if (!main.children.length) main.innerHTML = '<p class="empty">출력할 안내게시물이 없습니다. 좌석배치표에서 배치를 먼저 하거나, 왼쪽에서 게시물 종류를 체크하세요.</p>';
+    PosterRender.fit(main);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => PosterRender.fit(main));
+  }
+
+  function onSeat(e, room) {
+    const el = e.target.closest('[data-seat]');
+    if (!el) return;
+    const id = room.room.id, seat = room.seats.find(s => s.id === el.dataset.seat);
+    const targets = e.shiftKey ? room.seats.filter(s => s.bay === seat.bay) : [seat];
+    const manual = S.manual[id] = S.manual[id] || {};
+    const ov = S.overrides[id] = S.overrides[id] || {};
+    const isOpen = s => (ov[s.id] || s.state) === 'open';
+    const before = JSON.stringify(manual);
+    for (const s of targets) {
+      if (tool.kind === 'paint') { if (isOpen(s)) manual[s.id] = tool.name; }
+      else if (tool.kind === 'erase') delete manual[s.id];
+      else if (tool.kind === 'toggle') {
+        const next = isOpen(e.shiftKey ? seat : s) ? 'blocked' : 'open';
+        if (next === s.state) delete ov[s.id]; else ov[s.id] = next;
+        if (next === 'blocked') delete manual[s.id];
+      }
+    }
+    // 수기 배정이 그 직렬의 응시 인원보다 많아지면 확인 — 취소하면 이전 상태로
+    if (tool.kind === 'paint') {
+      const total = Object.values(S.manual).reduce((n, m) => n + Object.values(m).filter(v => v === tool.name).length, 0);
+      const x = S.series.find(z => z.name === tool.name);
+      if (x && total > (+x.count || 0) &&
+          !confirm(`응시인원보다 많은 좌석이 선택되었습니다.\n(${tool.name}: 응시 ${+x.count || 0}명 / 수기 배정 ${total}석)\n\n확인 = 무시하고 진행\n취소 = 이전 상태로 되돌리기`)) {
+        S.manual[id] = JSON.parse(before);
+      }
+    }
+    save(); draw();
+  }
+
+  // 교탁·기둥·출입문 끌어서 옮기기(본체) / 크기 바꾸기(오른쪽 아래 손잡이).  끌는 동안은 그 도형만 움직이고, 놓으면 저장 후 다시 그린다
+  function onStructDrag(e, page, roomId) {
+    const el = e.target.closest('[data-struct]');
+    if (!el || e.button !== 0) return;
+    e.preventDefault();
+    const svg = page.querySelector('svg');
+    const idx = el.dataset.struct, mode = el.dataset.mode;
+    const mmPerPx = SeatRender.PAGE.w / svg.getBoundingClientRect().width;
+    const s = +svg.dataset.s, p = +svg.dataset.p, ox = +svg.dataset.ox, oy = +svg.dataset.oy;
+    const base = { x: +el.dataset.ux, y: +el.dataset.uy, w: +el.dataset.uw, h: +el.dataset.uh };
+    const body = svg.querySelector(`rect.struct[data-struct="${idx}"]`);
+    const handle = svg.querySelector(`rect.handle[data-struct="${idx}"]`);
+    const label = svg.querySelector(`text[data-label="${idx}"]`);
+    const hs = +handle.getAttribute('width');
+    const x0 = e.clientX, y0 = e.clientY;
+    let box = base, moved = false;
+    const place = b => {
+      const X = ox + b.x * s, Y = oy + b.y * p, W = b.w * s, H = b.h * p;
+      body.setAttribute('x', X); body.setAttribute('y', Y); body.setAttribute('width', W); body.setAttribute('height', H);
+      handle.setAttribute('x', X + W - hs / 2); handle.setAttribute('y', Y + H - hs / 2);
+      if (label) { label.setAttribute('x', X + W / 2); label.setAttribute('y', Y + H / 2); }
+    };
+    const onMove = ev => {
+      const dx = (ev.clientX - x0) * mmPerPx / s, dy = (ev.clientY - y0) * mmPerPx / p;
+      if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 2) moved = true;
+      box = mode === 'resize'
+        ? { ...base, w: Math.max(0.3, base.w + dx), h: Math.max(0.2, base.h + dy) }
+        : { ...base, x: base.x + dx, y: base.y + dy };
+      place(box);
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (!moved) return;
+      const r2 = n => Math.round(n * 100) / 100;
+      (S.structs[roomId] = S.structs[roomId] || {})[idx] = { x: r2(box.x), y: r2(box.y), w: r2(box.w), h: r2(box.h) };
+      save(); draw();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  // ---------- 버튼 ----------
+  $('print').addEventListener('click', () => window.print());
+  $('relayout').addEventListener('click', () => relayout(true));
+  $('tabSeat').addEventListener('click', () => { S.view = 'seat'; save(); draw(); });
+  $('tabPoster').addEventListener('click', () => { S.view = 'poster'; save(); draw(); });
+  const pBind = (id, key, type = 'value') => {
+    const el = $(id);
+    el[type === 'checked' ? 'checked' : 'value'] = S.poster[key];
+    el.addEventListener(type === 'checked' || el.tagName === 'SELECT' ? 'change' : 'input', () => { S.poster[key] = type === 'checked' ? el.checked : el.value; save(); draw(); });
+  };
+  pBind('pDate', 'date'); pBind('pTitle', 'title'); pBind('pGrade', 'grade'); pBind('pEntry', 'entry'); pBind('pDesk', 'desk'); pBind('pClosed', 'closed');
+  pBind('pShowA', 'showA', 'checked'); pBind('pShowB', 'showB', 'checked'); pBind('pShowC', 'showC', 'checked');
+  const pcss = document.createElement('style'); pcss.textContent = PosterRender.CSS; document.head.appendChild(pcss);
+  $('reset').addEventListener('click', () => {
+    if (!confirm('직접 칠한 좌석, 착석금지 수정, 옮기거나 크기를 바꾼 구조물을 모두 엑셀 원래대로 되돌릴까요? (직렬·인원·강의실 선택은 유지)')) return;
+    S.manual = {}; S.overrides = {}; S.structs = {}; save(); draw();
+  });
+  $('export').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `좌석배치설정_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $('importBtn').addEventListener('click', () => $('importFile').click());
+  $('importFile').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try { S = Object.assign(defaults(), JSON.parse(await file.text())); save(); location.reload(); }
+    catch (err) { alert('설정 파일을 읽지 못했습니다: ' + err.message); }
+  });
+
+  renderSeries(); renderTools();
+  if (!S.placed) relayout(false); else draw();   // 처음 열 때만 자동 배치, 이후엔 저장된 배치를 그대로
+})();
+</script>
+</body>
+</html>
