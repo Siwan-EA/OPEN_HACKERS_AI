@@ -73,7 +73,8 @@
   .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .pagecap input { width: 220px; padding: 3px 6px; font-size: 12px; }
   .pagecap label { display: inline-flex; gap: 4px; align-items: center; margin-left: 10px; }
-  body.view-poster .seat-only, body.view-seat .poster-only { display: none !important; }
+  body:not(.view-seat) .seat-only, body:not(.view-poster) .poster-only, body:not(.view-codes) .codes-only, body.view-seat .notseat-only { display: none !important; }
+  .codes-only textarea { font-family: Consolas, 'Malgun Gothic', monospace; font-size: 12px; min-height: 180px; }
   .srow .where select { width: auto; padding: 2px 4px; font-size: 12px; }
   .pagecap { max-width: 1180px; margin: 0 auto 6px; color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; }
   .page .seat { cursor: pointer; }
@@ -138,6 +139,25 @@
     <ul class="rooms" id="roomList"></ul>
   </section>
 
+  <section class="sec notseat-only">
+    <h2>급수</h2>
+    <label class="f"><span>기본 급수 (이름 앞에 「7급」 같은 표시가 없는 직렬)</span>
+      <select id="pGrade"><option value="9급">[9급]</option><option value="7급">[7급]</option><option value="">표기 안 함</option></select></label>
+    <p class="hint" style="margin-top:0">직렬마다 따로 정하려면 위 직렬 칸의 「급수」에서 고르세요.</p>
+  </section>
+
+  <section class="sec codes-only">
+    <h2>OMR 과목코드 안내 (B4 가로)</h2>
+    <label class="f"><span>제목</span><input type="text" id="kTitle"></label>
+    <label class="f"><span>안내 문구 (노랑)</span><input type="text" id="kSub"></label>
+    <label class="f"><span>아래 경고 문구 (빨강)</span><input type="text" id="kFoot"></label>
+    <label class="f"><span>예시 휴대폰 뒤 4자리</span><input type="text" id="kPhone" maxlength="4" inputmode="numeric"></label>
+    <label class="f"><span>과목코드표 (「9급」·「7급」 줄 아래에 「코드 직렬」 한 줄씩)</span><textarea id="kTable" spellcheck="false"></textarea></label>
+    <div class="row"><button class="small" id="kTableReset">코드표 기본값으로</button></div>
+    <div class="warnbox" id="kWarn"></div>
+    <p class="hint">강의실마다 1장, 그 강의실에 배치된 직렬의 코드만 나옵니다. OMR 8자리 = 앞 4자리 직렬코드 + 뒤 4자리 휴대폰 번호 뒷자리.</p>
+  </section>
+
   <section class="sec poster-only">
     <h2>안내게시물 (A4 가로)</h2>
     <div class="row" style="align-items:flex-end">
@@ -145,8 +165,6 @@
       <label class="f" style="flex:1"><span>소재</span><select id="pKind"><option>공무원</option><option>군무원</option></select></label>
     </div>
     <p class="hint" style="margin-top:-2px">제목 미리보기: <b id="pTitlePreview"></b></p>
-    <label class="f"><span>기본 급수 (이름 앞에 「7급」 같은 표시가 없는 직렬)</span>
-      <select id="pGrade"><option value="9급">[9급]</option><option value="7급">[7급]</option><option value="">표기 안 함</option></select></label>
     <label class="f"><span>입실 안내 (초록)</span><input type="text" id="pEntry"></label>
     <label class="f"><span>데스크 안내 (노란 형광)</span><input type="text" id="pDesk"></label>
     <label class="f"><span>입실 불가 안내 (「입실 불가」만 빨강)</span><input type="text" id="pClosed"></label>
@@ -177,13 +195,14 @@
 </aside>
 
 <main>
-  <nav class="tabs"><button id="tabSeat">좌석배치표 (B4)</button><button id="tabPoster">안내게시물 (A4)</button></nav>
+  <nav class="tabs"><button id="tabSeat">좌석배치표 (B4)</button><button id="tabPoster">안내게시물 (A4)</button><button id="tabCodes">과목코드 (B4)</button></nav>
   <div id="pages"></div>
 </main>
 
-<script src="rooms.js?v=20261016210357"></script>
-<script src="render.js?v=20261016210357"></script>
-<script src="poster.js?v=20261016210357"></script>
+<script src="rooms.js?v=20261016212644"></script>
+<script src="render.js?v=20261016212644"></script>
+<script src="poster.js?v=20261016212644"></script>
+<script src="codes.js?v=20261016212644"></script>
 <script>
 (function () {
   const ROOMS = window.ROOMS || [];
@@ -219,7 +238,10 @@
   S.rooms = (S.rooms || []).filter(r => known.has(r.id));
   for (const r of ROOMS) if (!S.rooms.some(x => x.id === r.room.id)) S.rooms.push({ id: r.room.id, on: false });
   S.manual = S.manual || {}; S.overrides = S.overrides || {}; S.structs = S.structs || {};
-  S.poster = Object.assign(posterDefaults(), S.poster || {}); S.poster.edits = S.poster.edits || {}; S.view = S.view === 'poster' ? 'poster' : 'seat';
+  S.poster = Object.assign(posterDefaults(), S.poster || {}); S.poster.edits = S.poster.edits || {}; S.view = ['poster', 'codes'].includes(S.view) ? S.view : 'seat';
+  S.codes = Object.assign({ table: CodeRender.DEFAULT_TABLE, title: 'OMR 과목코드 마킹 안내',
+    sub: 'OMR 8자리 = 앞 4자리 직렬코드 + 뒤 4자리 휴대폰 번호 뒷자리 — 잘못 쓰면 채점되지 않습니다',
+    foot: '※ 과목코드 미기재·오기재 시 채점되지 않습니다 ※', phone: '5678' }, S.codes || {});
   // 배치 결과는 저장해 두고 「재배치」를 눌러야만 다시 계산한다 (규칙이 바뀌거나 JSON을 불러와도 좌석이 그대로).
   // S.placed = 자동 배치분만 {강의실: {좌석: 직렬}}, 수기 배정은 S.manual
   S.series.forEach(x => { x.rooms = (x.rooms || []).filter(id => known.has(id)); });
@@ -391,10 +413,11 @@
   function draw() {
     const active = activeRooms();
     const c = cfg();
-    const poster = S.view === 'poster';
-    document.body.className = poster ? 'view-poster' : 'view-seat';
-    $('tabSeat').className = poster ? '' : 'on';
+    const poster = S.view === 'poster', codes = S.view === 'codes';
+    document.body.className = 'view-' + S.view;
+    $('tabSeat').className = S.view === 'seat' ? 'on' : '';
     $('tabPoster').className = poster ? 'on' : '';
+    $('tabCodes').className = codes ? 'on' : '';
     $('pagesize').textContent = poster ? '@page { size: 297mm 210mm; margin: 0; }' : '@page { size: 364mm 257mm; margin: 0; }';
     $('print').textContent = poster ? 'A4로 인쇄' : 'B4로 인쇄';
     $('printHint').innerHTML = poster
@@ -409,7 +432,7 @@
       const fills = seatsOf(a);
       const per = perRoom[id] = {};
       Object.values(fills).forEach(n => { per[n] = (per[n] || 0) + 1; placedCount[n] = (placedCount[n] || 0) + 1; });
-      if (poster) continue;
+      if (S.view !== 'seat') continue;
       const free = SeatRender.capacity(a.room, a.overrides) - Object.keys(fills).length;
       const cap = document.createElement('div');
       cap.className = 'pagecap';
@@ -438,6 +461,7 @@
       ? '마지막 배치 이후 인원·직렬·강의실·착석금지·구조물이 바뀌었습니다. 「재배치」를 눌러야 좌석에 반영됩니다.' : '';
     renderRooms({ perRoom });
     if (poster) drawPosters(active, perRoom);
+    if (codes) drawCodes(active, perRoom);
   }
 
   // ---------- 안내게시물 ----------
@@ -510,6 +534,40 @@
     if (!main.children.length) main.innerHTML = '<p class="empty">출력할 안내게시물이 없습니다. 좌석배치표에서 배치를 먼저 하거나, 왼쪽에서 게시물 종류를 체크하세요.</p>';
     PosterRender.fit(main);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => PosterRender.fit(main));
+  }
+
+  // ---------- OMR 과목코드 안내 (강의실별 1장) ----------
+  function drawCodes(active, perRoom) {
+    const main = $('pages');
+    const table = CodeRender.parseTable(S.codes.table);
+    const phone = (String(S.codes.phone || '').replace(/\D/g, '') + '5678').slice(0, 4);
+    const used = active.filter(a => Object.keys(perRoom[a.room.room.id] || {}).length);
+    const sectionRank = r => (/앞/.test(r.room.name) ? 0 : /뒤|뒷/.test(r.room.name) ? 2 : 1);
+    used.sort((x, y) => (+roomNo(x.room) || 0) - (+roomNo(y.room) || 0) || sectionRank(x.room) - sectionRank(y.room));
+    const missing = [];
+    for (const a of used) {
+      const per = perRoom[a.room.room.id];
+      const entries = S.series.filter(x => x.name && per[x.name]).map(x => {
+        const grade = gradeOf(x) || '9급', name = plainName(x), hit = CodeRender.lookup(table, grade, name);
+        if (!hit) missing.push(`${placeOf(a.room)}: [${grade}] ${name}`);
+        return { grade, name: hit ? hit.name : name, code: hit ? hit.code : null };
+      });
+      const first = entries.find(e => e.code);
+      const svg = CodeRender.renderRoom({ title: S.codes.title, sub: S.codes.sub, foot: S.codes.foot },
+        { place: placeOf(a.room), entries, example: first ? { grade: first.grade, name: first.name, code: first.code, phone } : null });
+      const cap = document.createElement('div');
+      cap.className = 'pagecap';
+      const miss = entries.filter(e => !e.code);
+      cap.innerHTML = `<span>${esc(a.room.room.name)} · 직렬 ${entries.length}개</span><span style="color:${miss.length ? '#c62828' : 'inherit'}">${miss.length ? '코드 없음: ' + esc(miss.map(e => e.name).join(', ')) : entries.map(e => e.code).join(' · ')}</span>`;
+      const page = document.createElement('div');
+      page.className = 'page';
+      page.innerHTML = svg;
+      main.append(cap, page);
+    }
+    if (!used.length) main.innerHTML = '<p class="empty">배치된 강의실이 없습니다. 좌석배치표에서 먼저 배치하세요.</p>';
+    $('kWarn').textContent = missing.length ? '과목코드를 못 찾은 직렬: ' + missing.join(', ') + ' — 코드표에 같은 이름으로 넣거나 직렬 이름을 맞춰 주세요.' : '';
+    CodeRender.fit(main);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => CodeRender.fit(main));
   }
 
   // 게시물 글자 칸을 그 자리에서 고치기 — 고친 내용은 그 장(pageId)의 칸(key)별로 저장, 칸을 벗어나면 반영
@@ -627,7 +685,14 @@
   };
   pBind('pKind', 'kind'); pBind('pGradeText', 'gradeText'); pBind('pGrade', 'grade'); pBind('pEntry', 'entry'); pBind('pDesk', 'desk'); pBind('pClosed', 'closed');
   pBind('pShowA', 'showA', 'checked'); pBind('pShowB', 'showB', 'checked'); pBind('pShowC', 'showC', 'checked');
-  const pcss = document.createElement('style'); pcss.textContent = PosterRender.CSS; document.head.appendChild(pcss);
+  const pcss = document.createElement('style'); pcss.textContent = PosterRender.CSS + CodeRender.CSS; document.head.appendChild(pcss);
+  $('tabCodes').addEventListener('click', () => { S.view = 'codes'; save(); draw(); });
+  const kBind = (id, key) => { const el = $(id); el.value = S.codes[key]; el.addEventListener('input', () => { S.codes[key] = el.value; save(); draw(); }); };
+  kBind('kTitle', 'title'); kBind('kSub', 'sub'); kBind('kFoot', 'foot'); kBind('kPhone', 'phone'); kBind('kTable', 'table');
+  $('kTableReset').addEventListener('click', () => {
+    if (!confirm('과목코드표를 처음 받은 기본값으로 되돌릴까요?')) return;
+    S.codes.table = CodeRender.DEFAULT_TABLE; $('kTable').value = S.codes.table; save(); draw();
+  });
   $('reset').addEventListener('click', () => {
     if (!confirm('직접 칠한 좌석, 착석금지 수정, 옮기거나 크기를 바꾼 구조물을 모두 엑셀 원래대로 되돌릴까요? (직렬·인원·강의실 선택은 유지)')) return;
     S.manual = {}; S.overrides = {}; S.structs = {}; save(); draw();
