@@ -140,7 +140,6 @@
 
   <section class="sec poster-only">
     <h2>안내게시물 (A4 가로)</h2>
-    <label class="f"><span>시험일 (제목에 「8/23(일)」로 들어감)</span><input type="date" id="pDate"></label>
     <div class="row" style="align-items:flex-end">
       <label class="f" style="flex:1"><span>급수 표기 (비우면 자동)</span><input type="text" id="pGradeText" placeholder="자동"></label>
       <label class="f" style="flex:1"><span>소재</span><select id="pKind"><option>공무원</option><option>군무원</option></select></label>
@@ -182,9 +181,9 @@
   <div id="pages"></div>
 </main>
 
-<script src="rooms.js?v=20261016205844"></script>
-<script src="render.js?v=20261016205844"></script>
-<script src="poster.js?v=20261016205844"></script>
+<script src="rooms.js?v=20261016210357"></script>
+<script src="render.js?v=20261016210357"></script>
+<script src="poster.js?v=20261016210357"></script>
 <script>
 (function () {
   const ROOMS = window.ROOMS || [];
@@ -448,16 +447,14 @@
   const placeOf = room => room.room.name.replace(/강의실$/, '').trim().replace(/뒷$/, '뒤');          // 508호 앞강의실 → 508호 앞
   const sectionOf = room => room.room.name.replace(/^\s*\d+호\s*/, '').replace(/강의실$/, ' 강의실').trim();  // → 앞 강의실
   const roomNo = room => (room.room.name.match(/\d+/) || [''])[0];
-  // 제목: [날짜(요일)] [급수] [소재] 모의고사 (기본 「9/7급 공무원 모의고사」) — 급수를 비우면 배치된 직렬의 급수로 자동 (9급·7급 → 「9/7급」)
+  // 제목: [급수] [소재] 모의고사 (기본 「9/7급 공무원 모의고사」, 날짜는 넣지 않음 — 너무 길어져서) — 급수를 비우면 배치된 직렬의 급수로 자동 (9급·7급 → 「9/7급」)
   function autoGradeText(perRoom) {
     const nums = new Set();
     for (const per of Object.values(perRoom || {})) for (const x of S.series) if (x.name && per[x.name]) { const g = gradeOf(x); if (g) nums.add(parseInt(g, 10)); }
     return nums.size ? [...nums].sort((p, q) => q - p).join('/') + '급' : '';
   }
   function posterTitle(perRoom) {
-    const d = S.poster.date ? new Date(S.poster.date + 'T00:00:00') : null;
-    const date = d && !isNaN(d) ? `${d.getMonth() + 1}/${d.getDate()}(${'일월화수목금토'[d.getDay()]})` : '';
-    return [date, S.poster.gradeText.trim() || autoGradeText(perRoom), S.poster.kind, '모의고사'].filter(Boolean).join(' ');
+    return [S.poster.gradeText.trim() || autoGradeText(perRoom), S.poster.kind, '모의고사'].filter(Boolean).join(' ');
   }
   // 강의실에 실제로 앉힌 직렬 → 급수별 묶음 (직렬 입력 순서)
   function groupsOf(per) {
@@ -628,7 +625,7 @@
     el[type === 'checked' ? 'checked' : 'value'] = S.poster[key];
     el.addEventListener(type === 'checked' || el.tagName === 'SELECT' ? 'change' : 'input', () => { S.poster[key] = type === 'checked' ? el.checked : el.value; save(); draw(); });
   };
-  pBind('pDate', 'date'); pBind('pKind', 'kind'); pBind('pGradeText', 'gradeText'); pBind('pGrade', 'grade'); pBind('pEntry', 'entry'); pBind('pDesk', 'desk'); pBind('pClosed', 'closed');
+  pBind('pKind', 'kind'); pBind('pGradeText', 'gradeText'); pBind('pGrade', 'grade'); pBind('pEntry', 'entry'); pBind('pDesk', 'desk'); pBind('pClosed', 'closed');
   pBind('pShowA', 'showA', 'checked'); pBind('pShowB', 'showB', 'checked'); pBind('pShowC', 'showC', 'checked');
   const pcss = document.createElement('style'); pcss.textContent = PosterRender.CSS; document.head.appendChild(pcss);
   $('reset').addEventListener('click', () => {
